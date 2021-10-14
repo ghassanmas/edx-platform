@@ -22,6 +22,7 @@
             platformName,
             contactEmail,
             allowEmailChange,
+            collectYearOfBirth,
             socialPlatforms,
             syncLearnerProfileData,
             enterpriseName,
@@ -245,6 +246,10 @@
                     ]
                 }
             ];
+
+            if (!collectYearOfBirth){
+              aboutSectionsData[1]['fields'].splice(2,1)
+}
 
 			// Secondary email address
             if (isSecondaryEmailFeatureEnabled) {
