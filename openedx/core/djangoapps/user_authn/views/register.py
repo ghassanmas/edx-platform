@@ -589,7 +589,7 @@ class RegistrationView(APIView):
                 accounts_settings.USERNAME_CONFLICT_MSG.format(username=username)
             )
             errors['username'] = [{'user_message': error_message}]
-            errors['username_suggestions'] = generate_username_suggestions(data.get('name'))
+            errors['username_suggestions'] = generate_username_suggestions(data.get('username'))
 
         if errors:
             return self._create_response(request, errors, status_code=409, error_code=error_code)
