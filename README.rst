@@ -73,6 +73,8 @@ Backporting
 ----------
 Back porting a PR just add a label to candidate PR _which is opened aginst master_, the label should be `backport open-release/{release-name}.master` i.e. for palm `backport open-release/palm.maser`.
 
+Let's try again backporting for two release branches
+
 Getting Help
 ------------
 
