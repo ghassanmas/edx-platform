@@ -8,8 +8,8 @@ function createMobileMenu() {
      * Dynamically create a mobile menu from all specified mobile links
      * on the page.
      */
-    
-'use strict';
+
+    'use strict';
 
     $('.mobile-nav-item').each(function() {
         var mobileNavItem = $(this).clone().addClass('mobile-nav-link');
@@ -118,6 +118,7 @@ $('.mobile-menu, .global-header').on('keydown', function(e) {
 
     // Enable arrow functionality within the menu.
     if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && (isDropdownOption || isMobileOption
+        // eslint-disable-next-line no-mixed-operators
         || (isHamburgerMenu && $hamburgerMenu.hasClass('open')) || isToggle && $toggleUserDropdown.hasClass('open'))) {
         isNext = e.key === 'ArrowDown';
         if (isNext && !isHamburgerMenu && !isToggle && isLastItem) {

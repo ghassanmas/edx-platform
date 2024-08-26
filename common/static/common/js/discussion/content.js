@@ -208,7 +208,7 @@
             Content.prototype.incrementVote = function(increment) {
                 var newVotes;
                 newVotes = _.clone(this.get('votes'));
-                newVotes.up_count = newVotes.up_count + increment;
+                newVotes.up_count += increment;
                 return this.set('votes', newVotes);
             };
 
@@ -379,6 +379,7 @@
                 var count;
                 count = 0;
                 this.get('comments').each(function(comment) {
+                    // eslint-disable-next-line no-return-assign
                     return count += comment.getCommentsCount() + 1;
                 });
                 return count;

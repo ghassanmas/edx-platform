@@ -1,6 +1,7 @@
+// eslint-disable-next-line padded-blocks
 (function($) { // eslint-disable-line wrap-iife
-    
-'use strict';
+
+    'use strict';
 
     $.fn.extend({
         /*

@@ -64,6 +64,7 @@
     Markdown.Editor = function(markdownConverter, idPostfix, help, imageUploadHandler) {
         idPostfix = idPostfix || '';
 
+        // eslint-disable-next-line no-multi-assign
         var hooks = this.hooks = new Markdown.HookCollection();
         hooks.addNoop('onPreviewPush'); // called with no arguments after the preview has been refreshed
         hooks.addNoop('postBlockquoteCreation'); // called with the user's selection *after* the blockquote was created; should return the actual to-be-inserted text
@@ -102,6 +103,7 @@
             uiManager = new UIManager(idPostfix, panels, undoManager, previewManager, commandManager, help, imageUploadHandler);
             uiManager.setUndoRedoButtonStates();
 
+            // eslint-disable-next-line no-multi-assign
             var forceRefresh = that.refreshPreview = function() { previewManager.refresh(true); };
 
             forceRefresh();
@@ -123,7 +125,7 @@
 
             this.before = this.before.replace(regex,
                 function(match) {
-                    chunkObj.startTag = chunkObj.startTag + match;
+                    chunkObj.startTag += match;
                     return '';
                 });
 
@@ -131,7 +133,7 @@
 
             this.selection = this.selection.replace(regex,
                 function(match) {
-                    chunkObj.startTag = chunkObj.startTag + match;
+                    chunkObj.startTag += match;
                     return '';
                 });
         }
@@ -163,6 +165,7 @@
         var beforeReplacer, afterReplacer,
             that = this;
         if (remove) {
+            // eslint-disable-next-line no-multi-assign
             beforeReplacer = afterReplacer = '';
         } else {
             beforeReplacer = function(s) { that.before += s; return ''; };
@@ -194,16 +197,17 @@
 
         this.selection = this.selection.replace(/(^\n*)/, '');
 
-        this.startTag = this.startTag + re.$1;
+        this.startTag += re.$1;
 
         this.selection = this.selection.replace(/(\n*$)/, '');
-        this.endTag = this.endTag + re.$1;
+        this.endTag += re.$1;
         this.startTag = this.startTag.replace(/(^\n*)/, '');
-        this.before = this.before + re.$1;
+        this.before += re.$1;
         this.endTag = this.endTag.replace(/(\n*$)/, '');
-        this.after = this.after + re.$1;
+        this.after += re.$1;
 
         if (this.before) {
+            // eslint-disable-next-line no-multi-assign
             regexText = replacementText = '';
 
             while (nLinesBefore--) {
@@ -218,6 +222,7 @@
         }
 
         if (this.after) {
+            // eslint-disable-next-line no-multi-assign
             regexText = replacementText = '';
 
             while (nLinesAfter--) {
@@ -236,7 +241,7 @@
 
     function findAnEmptyToolbar(toolbarClassName) {
         var toolbars = doc.getElementsByClassName(toolbarClassName);
-        for (var i=0; i < toolbars.length; ++i) {
+        for (var i = 0; i < toolbars.length; ++i) {
             var aToolbar = toolbars[i];
             if (aToolbar.children.length == 0) {
                 var anEmptyToolbar = aToolbar;
@@ -353,6 +358,7 @@
     position.getTop = function(elem, isInner) {
         var result = elem.offsetTop;
         if (!isInner) {
+            // eslint-disable-next-line no-cond-assign
             while (elem = elem.offsetParent) {
                 result += elem.offsetTop;
             }
@@ -523,8 +529,8 @@
                 var keyCode = event.charCode || event.keyCode;
                 var keyCodeChar = String.fromCharCode(keyCode);
 
+                // eslint-disable-next-line default-case
                 switch (keyCodeChar) {
-
                 case 'y':
                     undoObj.redo();
                     handled = true;
@@ -548,7 +554,6 @@
                 if (window.event) {
                     window.event.returnValue = false;
                 }
-                return;
             }
         };
 
@@ -638,6 +643,7 @@
 
             this.setInputAreaSelectionStartEnd();
             this.scrollTop = inputArea.scrollTop;
+            // eslint-disable-next-line no-mixed-operators
             if (!this.text && inputArea.selectionStart || inputArea.selectionStart === 0) {
                 this.text = inputArea.value;
             }
@@ -737,7 +743,7 @@
 
         // Sets the TextareaState properties given a chunk of markdown.
         this.setChunks = function(chunk) {
-            chunk.before = chunk.before + chunk.startTag;
+            chunk.before += chunk.startTag;
             chunk.after = chunk.endTag + chunk.after;
 
             this.start = chunk.before.length;
@@ -864,7 +870,7 @@
             var sibling = preview.nextSibling;
             parent.removeChild(preview);
             preview.innerHTML = text;
-            if (!sibling) { parent.appendChild(preview); } else { parent.insertBefore(preview, sibling); } // eslint-disable-line max-len, xss-lint: disable=javascript-jquery-insert-into-target
+            if (!sibling) { parent.appendChild(preview); } else { parent.insertBefore(preview, sibling); } // xss-lint: disable=javascript-jquery-insert-into-target
         };
 
         var nonSuckyBrowserPreviewSet = function(text) {
@@ -967,8 +973,10 @@
     //      It receives a single argument; either the entered text (if OK was chosen) or null (if Cancel
     //      was chosen).
     ui.prompt = function(title,
+        // eslint-disable-next-line no-shadow
         urlLabel,
         urlHelp,
+        // eslint-disable-next-line no-shadow
         urlError,
         urlDescLabel,
         urlDescHelp,
@@ -976,6 +984,7 @@
         urlDescError,
         defaultInputText,
         callback,
+        // eslint-disable-next-line no-shadow
         imageIsDecorativeLabel,
         imageUploadHandler) {
         // These variables need to be declared at this level since they are used
@@ -1047,7 +1056,7 @@
                 }
 
                 document.getElementById('wmd-editor-dialog-form-errors').textContent = [
-                    interpolate( // eslint-disable-line no-undef, xss-lint: disable=javascript-interpolate
+                    interpolate( // xss-lint: disable=javascript-interpolate
                         ngettext(
                             // Translators: 'errorCount' is the number of errors found in the form.
                             '%(errorCount)s error found in form.', '%(errorCount)s errors found in form.',
@@ -1387,6 +1396,7 @@
                 button.removeAttribute('aria-disabled');
             } else {
                 image.style.backgroundPosition = button.XShift + ' ' + disabledYShift;
+                // eslint-disable-next-line no-multi-assign
                 button.onmouseover = button.onmouseout = button.onclick = function() { };
                 // This line does not appear in vanilla WMD. It was added by edX to improve accessibility.
                 // It should become a separate commit applied to WMD's official HEAD if we remove this edited version
@@ -1572,11 +1582,9 @@
 
             // Add the true markup.
             var markup = nStars <= 1 ? '*' : '**'; // shouldn't the test be = ?
-            chunk.before = chunk.before + markup;
+            chunk.before += markup;
             chunk.after = markup + chunk.after;
         }
-
-        return;
     };
 
     commandProto.stripLinkDefs = function(text, defsToAdd) {
@@ -1663,7 +1671,9 @@
             });
             if (title) {
                 title = title.trim ? title.trim() : title.replace(/^\s*/, '').replace(/\s*$/, '');
-                title = $.trim(title).replace(/"/g, 'quot;').replace(/\(/g, '&#40;').replace(/\)/g, '&#41;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                title = $.trim(title).replace(/"/g, 'quot;').replace(/\(/g, '&#40;').replace(/\)/g, '&#41;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
             }
             return title ? link + ' "' + title + '"' : link;
         });
@@ -1683,6 +1693,7 @@
             // *removing* a link, but *adding* one, so whatever findTags() found is now back to being part of the
             // link text. linkEnteredCallback takes care of escaping any brackets.
             chunk.selection = chunk.startTag + chunk.selection + chunk.endTag;
+            // eslint-disable-next-line no-multi-assign
             chunk.startTag = chunk.endTag = '';
 
             if (/\n\n/.test(chunk.selection)) {
@@ -2000,6 +2011,7 @@
             chunk.findTags(/`/, /`/);
 
             if (!chunk.startTag && !chunk.endTag) {
+                // eslint-disable-next-line no-multi-assign
                 chunk.startTag = chunk.endTag = '`';
                 if (!chunk.selection) {
                     chunk.selection = gettext('enter code here');
@@ -2008,6 +2020,7 @@
                 chunk.before += chunk.endTag;
                 chunk.endTag = '';
             } else {
+                // eslint-disable-next-line no-multi-assign
                 chunk.startTag = chunk.endTag = '';
             }
         }
@@ -2132,6 +2145,7 @@
         if (/#+/.test(chunk.startTag)) {
             headerLevel = re.lastMatch.length;
         }
+        // eslint-disable-next-line no-multi-assign
         chunk.startTag = chunk.endTag = '';
 
         // Try to get the current header level by looking for - and = in the line
@@ -2145,6 +2159,7 @@
         }
 
         // Skip to the next line so we can create the header markdown.
+        // eslint-disable-next-line no-multi-assign
         chunk.startTag = chunk.endTag = '';
         chunk.skipLines(1, 1);
 

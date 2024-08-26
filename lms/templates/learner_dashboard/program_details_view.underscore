@@ -1,4 +1,5 @@
 <header class="js-program-header program-header full-width-banner"></header>
+<div class="js-program-details-alerts program-details-alerts program-subscription-alert-wrapper col-12 col-md-8"></div>
 <!-- TODO: consider if article is the most appropriate element here -->
 
 <div class="col-12 flex-column flex-md-row d-md-flex">
@@ -7,8 +8,7 @@
             <% if (completedCount === totalCount) { %>
                 <h3 class="program-heading-title"><%- gettext('Congratulations!') %></h3>
                 <div class="program-heading-message">
-                    <div><%- interpolate(gettext(
-                        'You have successfully completed all the requirements for the %(title)s %(type)s.'),
+                    <div><%- interpolate(gettext('You have successfully completed all the requirements for the %(title)s %(type)s.'),
                         { title: title, type: type }, true) %>
                     </div>
                 </div>
@@ -16,13 +16,16 @@
                 <h3 class="program-heading-title"><%- gettext('Your Program Journey') %></h3>
                 <div class="program-heading-message">
                     <div>
-                        <%- interpolate(gettext(
-                        'Track and plan your progress through the %(count)s courses in this program. To complete the program, you must earn a verified certificate for each course.'),
+                        <%- interpolate(gettext('Track and plan your progress through the %(count)s courses in this program. To complete the program, you must earn a verified certificate for each course.'),
                         { count: totalCount }, true) %>
                     </div>
                 </div>
             <% } %>
-            <% if (is_learner_eligible_for_one_click_purchase && (typeof is_mobile_only === 'undefined' || is_mobile_only === false)) { %>
+            <% if (
+                !isSubscriptionEligible
+                && is_learner_eligible_for_one_click_purchase
+                && (typeof is_mobile_only === 'undefined' || is_mobile_only === false)
+            ) { %>
             <a href="<%- completeProgramURL %>" class="btn-brand btn cta-primary upgrade-button complete-program" id="program_dashboard_course_upsell_all_button">
                 <%- gettext('Upgrade All Remaining Courses (')%>
                 <% if (discount_data.is_discounted) { %>

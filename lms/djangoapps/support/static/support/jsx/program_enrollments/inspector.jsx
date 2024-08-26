@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
-    Button, InputText, StatusAlert, InputSelect
+    Button, InputText, StatusAlert, InputSelect,
 } from '@edx/paragon';
 
 /*
@@ -68,6 +68,7 @@ const renderEnrollmentsSection = enrollments => (
                         {enrollment.program_name}
                     </span> Program ( <span className="font-weight-bold">
                         {enrollment.program_uuid}
+                        {/* eslint-disable-next-line react/jsx-closing-tag-location */}
                     </span>)
                 </h4>
                 <div> <span className="font-weight-bold">Status</span>: {enrollment.status} </div>
@@ -112,7 +113,7 @@ const renderEnrollmentsSection = enrollments => (
                                 </div>
                             )}
                         </div>
-                    )
+                    ),
                 )}
             </div>
         ))}
@@ -121,18 +122,24 @@ const renderEnrollmentsSection = enrollments => (
 );
 
 const validateInputs = () => {
+    // eslint-disable-next-line no-restricted-globals
     const inputEdxUser = self.document.getElementById('edx_user');
+    // eslint-disable-next-line no-restricted-globals
     const inputExternalKey = self.document.getElementById('external_key');
+    // eslint-disable-next-line no-restricted-globals
     const inputAlert = self.document.getElementById('input_alert');
     if (inputEdxUser.value && inputExternalKey.value) {
         inputAlert.removeAttribute('hidden');
+        // eslint-disable-next-line no-restricted-globals
         self.button.disabled = true;
     } else {
         inputAlert.setAttribute('hidden', '');
+        // eslint-disable-next-line no-restricted-globals
         self.button.disabled = false;
     }
 };
 
+// eslint-disable-next-line react/function-component-definition
 export const ProgramEnrollmentsInspectorPage = props => (
     <div>
         {JSON.stringify(props.learnerInfo) !== '{}' && (<h2> Search Results </h2>)}
@@ -152,7 +159,7 @@ export const ProgramEnrollmentsInspectorPage = props => (
                     dialog={props.error}
                 />
             )}
-            <div id="input_alert" className={'alert alert-danger'} hidden>
+            <div id="input_alert" className="alert alert-danger" hidden>
                 Search either by edx username or email, or Institution user key, but not both
             </div>
             <div key="edX_accounts">
@@ -184,6 +191,7 @@ export const ProgramEnrollmentsInspectorPage = props => (
                 label="Search"
                 type="submit"
                 className={['btn', 'btn-primary']}
+                // eslint-disable-next-line no-restricted-globals
                 inputRef={(input) => { self.button = input; }}
             />
         </form>
@@ -195,6 +203,7 @@ ProgramEnrollmentsInspectorPage.propTypes = {
     learnerInfo: PropTypes.shape({
         user: PropTypes.shape({
             username: PropTypes.string,
+            // eslint-disable-next-line react/no-typos
             email: PropTypes.email,
             external_user_key: PropTypes.string,
             sso_list: PropTypes.arrayOf(
@@ -228,7 +237,7 @@ ProgramEnrollmentsInspectorPage.propTypes = {
                             is_active: PropTypes.bool,
                             mode: PropTypes.string,
                         }),
-                    })
+                    }),
                 ),
             }),
         ),

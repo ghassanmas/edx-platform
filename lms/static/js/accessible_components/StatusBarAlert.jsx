@@ -6,6 +6,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import {StatusAlert} from '@edx/paragon/static';
 
+// eslint-disable-next-line import/prefer-default-export
 export class StatusAlertRenderer {
     constructor(message, selector, afterselector) {
         this.shiftFocus = this.shiftFocus.bind(this);
@@ -19,11 +20,11 @@ export class StatusAlertRenderer {
       */
             ReactDOM.render(
                 <StatusAlert
-                    alertType='warning'
-                    dismissible={true}
-                    open={true}
+                    alertType="warning"
+                    dismissible
+                    open
                     dialog={message}
-                    dismissable={true}
+                    dismissable
                     onClose={() => this.shiftFocus(afterselector)}
                 />,
                 document.querySelector(selector)

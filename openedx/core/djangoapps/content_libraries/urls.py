@@ -31,10 +31,6 @@ urlpatterns = [
             path('', views.LibraryDetailsView.as_view()),
             # Get the list of XBlock types that can be added to this library
             path('block_types/', views.LibraryBlockTypesView.as_view()),
-            # Get the list of Blockstore Bundle Links for this library, or add a new one:
-            path('links/', views.LibraryLinksView.as_view()),
-            # Update or delete a link:
-            path('links/<str:link_id>/', views.LibraryLinkDetailView.as_view()),
             # Get the list of XBlocks in this library, or add a new one:
             path('blocks/', views.LibraryBlocksView.as_view()),
             # Commit (POST) or revert (DELETE) all pending changes to this library:
@@ -47,6 +43,8 @@ urlpatterns = [
             path('team/group/<str:group_name>/', views.LibraryTeamGroupView.as_view()),
             # Import blocks into this library.
             path('import_blocks/', include(import_blocks_router.urls)),
+            # Paste contents of clipboard into library
+            path('paste_clipboard/', views.LibraryPasteClipboardView.as_view()),
         ])),
         path('blocks/<str:usage_key_str>/', include([
             # Get metadata about a specific XBlock in this library, or delete the block:

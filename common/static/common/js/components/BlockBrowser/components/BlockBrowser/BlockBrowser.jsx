@@ -26,6 +26,7 @@ const BLOCK_TYPE_NAME = {
 };
 
 const BlockType = PropTypes.shape({
+    // eslint-disable-next-line react/forbid-prop-types
     children: PropTypes.array,
     display_name: PropTypes.string.isRequired,
     id: PropTypes.string.isRequired,
@@ -33,8 +34,9 @@ const BlockType = PropTypes.shape({
     type: PropTypes.string.isRequired,
 });
 
+// eslint-disable-next-line react/function-component-definition
 export const BlockList = ({
-    blocks, selectedBlock, onSelectBlock, onChangeRoot
+    blocks, selectedBlock, onSelectBlock, onChangeRoot,
 }) => (
     <ul className="block-list">
         {blocks.map(block => (
@@ -48,11 +50,12 @@ export const BlockList = ({
                     label={block.display_name}
                 />
                 {block.children
-        && <Button
-            onClick={() => onChangeRoot(block.id)}
-            label={RightIcon}
-        />
-                }
+        && (
+            <Button
+                onClick={() => onChangeRoot(block.id)}
+                label={RightIcon}
+            />
+        )}
             </li>
         ))}
     </ul>
@@ -70,8 +73,10 @@ BlockList.defaultProps = {
     selectedBlock: null,
 };
 
+// eslint-disable-next-line react/function-component-definition
 export const BlockBrowser = ({
-    blocks, selectedBlock, onSelectBlock, onChangeRoot, className
+    // eslint-disable-next-line react/prop-types
+    blocks, selectedBlock, onSelectBlock, onChangeRoot, className,
 }) => !!blocks && (
     <div className={classNames('block-browser', className)}>
         <div className="header">

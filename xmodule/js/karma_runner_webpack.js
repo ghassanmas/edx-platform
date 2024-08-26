@@ -32,9 +32,9 @@ import '../../common/static/common/js/vendor/sinon.js';
 import 'jquery.ui';
 
 // These
-import './src/video/10_main.js'
-import './spec/helper.js'
-import './spec/video_helper.js'
+import './src/video/10_main.js';
+import './spec/helper.js';
+import './spec/video_helper.js';
 
 // These are the tests that will be run
 import './spec/video/async_process_spec.js';
@@ -46,6 +46,7 @@ import './spec/video/initialize_spec.js';
 import './spec/video/iterator_spec.js';
 import './spec/video/resizer_spec.js';
 import './spec/video/sjson_spec.js';
+import './spec/video/social_share_spec.js';
 import './spec/video/video_autoadvance_spec.js';
 import './spec/video/video_bumper_spec.js';
 import './spec/video/video_caption_spec.js';
@@ -66,16 +67,17 @@ import './spec/video/video_save_state_plugin_spec.js';
 import './spec/video/video_skip_control_spec.js';
 import './spec/video/video_speed_control_spec.js';
 import './spec/video/video_storage_spec.js';
+import './spec/video/video_transcript_feedback_spec.js';
 import './spec/video/video_volume_control_spec.js';
 import './spec/time_spec.js';
-import './spec/video/social_share_spec.js';
 
 // overwrite the loaded method and manually start the karma after a delay
 // Somehow the code initialized in jQuery's onready doesn't get called before karma auto starts
 
+// eslint-disable-next-line no-unused-expressions
 'use strict';
-window.__karma__.loaded = function () {
-    setTimeout(function () {
+window.__karma__.loaded = function() {
+    setTimeout(function() {
         window.__karma__.start();
     }, 1000);
 };

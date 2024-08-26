@@ -1,3 +1,4 @@
+// eslint-disable-next-line max-classes-per-file
 import React from 'react';
 import ReactDOM from 'react-dom';
 import PropTypes from 'prop-types';
@@ -15,22 +16,23 @@ class AnnouncementSkipLink extends React.Component {
                 this.setState({
                     count: data.count
                 });
-            })
+            });
     }
 
     render() {
-        return (<div>{'Skip to list of ' + this.state.count + ' announcements'}</div>)
+        return (<div>{'Skip to list of ' + this.state.count + ' announcements'}</div>);
     }
 }
 
+// eslint-disable-next-line react/prefer-stateless-function
 class Announcement extends React.Component {
     render() {
         return (
             <div
                 className="announcement"
+                // eslint-disable-next-line react/no-danger
                 dangerouslySetInnerHTML={{__html: this.props.content}}
-            >
-            </div>
+            />
         );
     }
 }
@@ -45,6 +47,7 @@ class AnnouncementList extends React.Component {
         this.state = {
             page: 1,
             announcements: [],
+            // eslint-disable-next-line react/no-unused-state
             num_pages: 0,
             has_prev: false,
             has_next: false,
@@ -60,13 +63,14 @@ class AnnouncementList extends React.Component {
                     announcements: data.announcements,
                     has_next: data.next,
                     has_prev: data.prev,
+                    // eslint-disable-next-line react/no-unused-state
                     num_pages: data.num_pages,
                     count: data.count,
                     start_index: data.start_index,
                     end_index: data.end_index,
                     page: page
                 });
-            })
+            });
     }
 
     renderPrevPage() {
@@ -77,12 +81,14 @@ class AnnouncementList extends React.Component {
         this.retrievePage(this.state.page + 1);
     }
 
+    // eslint-disable-next-line react/no-deprecated, react/sort-comp
     componentWillMount() {
         this.retrievePage(this.state.page);
     }
 
     render() {
         var children = this.state.announcements.map(
+            // eslint-disable-next-line react/no-array-index-key
             (announcement, index) => <Announcement key={index} content={announcement.content} />
         );
         if (this.state.has_prev) {
@@ -132,4 +138,4 @@ export default class AnnouncementsView {
     }
 }
 
-export {AnnouncementsView, AnnouncementList, AnnouncementSkipLink}
+export {AnnouncementsView, AnnouncementList, AnnouncementSkipLink};

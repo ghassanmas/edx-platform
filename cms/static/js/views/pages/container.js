@@ -6,10 +6,16 @@ define(['jquery', 'underscore', 'backbone', 'gettext', 'js/views/pages/base_page
     'common/js/components/utils/view_utils', 'js/views/container', 'js/views/xblock',
     'js/views/components/add_xblock', 'js/views/modals/edit_xblock', 'js/views/modals/move_xblock_modal',
     'js/models/xblock_info', 'js/views/xblock_string_field_editor', 'js/views/xblock_access_editor',
-    'js/views/pages/container_subviews', 'js/views/unit_outline', 'js/views/utils/xblock_utils'],
-function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView, AddXBlockComponent,
-    EditXBlockModal, MoveXBlockModal, XBlockInfo, XBlockStringFieldEditor, XBlockAccessEditor,
-    ContainerSubviews, UnitOutlineView, XBlockUtils) {
+    'js/views/pages/container_subviews', 'js/views/unit_outline', 'js/views/utils/xblock_utils',
+    'common/js/components/views/feedback_notification', 'common/js/components/views/feedback_prompt',
+    'js/views/utils/tagging_drawer_utils', 'js/utils/module',
+],
+function($, _, Backbone, gettext, BasePage,
+    ViewUtils, ContainerView, XBlockView,
+    AddXBlockComponent, EditXBlockModal, MoveXBlockModal,
+    XBlockInfo, XBlockStringFieldEditor, XBlockAccessEditor,
+    ContainerSubviews, UnitOutlineView, XBlockUtils,
+    NotificationView, PromptView, TaggingDrawerUtils, ModuleUtils) {
     'use strict';
 
     var XBlockContainerPage = BasePage.extend({
@@ -24,7 +30,11 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
             'click .delete-button': 'deleteXBlock',
             'click .show-actions-menu-button': 'showXBlockActionsMenu',
             'click .new-component-button': 'scrollToNewComponentButtons',
+            'click .save-button': 'saveSelectedLibraryComponents',
             'click .paste-component-button': 'pasteComponent',
+            'click .manage-tags-button': 'openManageTags',
+            'change .header-library-checkbox': 'toggleLibraryComponent',
+            'click .collapse-button': 'collapseXBlock',
         },
 
         options: {
@@ -46,6 +56,7 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
             BasePage.prototype.initialize.call(this, options);
             this.viewClass = options.viewClass || this.defaultViewClass;
             this.isLibraryPage = (this.model.attributes.category === 'library');
+            this.isLibraryContentPage = (this.model.attributes.category === 'library_content');
             this.nameEditor = new XBlockStringFieldEditor({
                 el: this.$('.wrapper-xblock-field'),
                 model: this.model
@@ -66,6 +77,7 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
                 model: this.model
             });
             this.messageView.render();
+            this.clipboardBroadcastChannel = new BroadcastChannel("studio_clipboard_channel");
             // Display access message on units and split test components
             if (!this.isLibraryPage) {
                 this.containerAccessView = new ContainerSubviews.ContainerAccess({
@@ -78,7 +90,8 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
                     el: this.$('#publish-unit'),
                     model: this.model,
                     // When "Discard Changes" is clicked, the whole page must be re-rendered.
-                    renderPage: this.render
+                    renderPage: this.render,
+                    clipboardBroadcastChannel: this.clipboardBroadcastChannel,
                 });
                 this.xblockPublisher.render();
 
@@ -94,15 +107,24 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
                 });
                 this.viewLiveActions.render();
 
+                if (!this.model.get('is_tagging_feature_disabled')) {
+                    this.tagListView = new ContainerSubviews.TagList({
+                        el: this.$('.unit-tags'),
+                        model: this.model
+                    });
+                    this.tagListView.setupMessageListener();
+                    this.tagListView.render();
+                }
+
                 this.unitOutlineView = new UnitOutlineView({
                     el: this.$('.wrapper-unit-overview'),
                     model: this.model
                 });
                 this.unitOutlineView.render();
+
             }
 
             this.listenTo(Backbone, 'move:onXBlockMoved', this.onXBlockMoved);
-            this.clipboardBroadcastChannel = new BroadcastChannel("studio_clipboard_channel");
         },
 
         getViewParameters: function() {
@@ -122,6 +144,7 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
                 xblockView = this.xblockView,
                 loadingElement = this.$('.ui-loading'),
                 unitLocationTree = this.$('.unit-location'),
+                unitTags = this.$('.unit-tags'),
                 hiddenCss = 'is-hidden';
 
             loadingElement.removeClass(hiddenCss);
@@ -147,14 +170,22 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
                     // Refresh the views now that the xblock is visible
                     self.onXBlockRefresh(xblockView);
                     unitLocationTree.removeClass(hiddenCss);
+                    unitTags.removeClass(hiddenCss);
 
                     // Re-enable Backbone events for any updated DOM elements
                     self.delegateEvents();
 
                     // Show/hide the paste button
-                    if (!self.isLibraryPage) {
+                    if (!self.isLibraryPage && !self.isLibraryContentPage) {
                         self.initializePasteButton();
                     }
+
+                    var targetId = window.location.hash.slice(1);
+                    if (targetId) {
+                        var target = document.getElementById(targetId);
+                        target.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+                    }
+
                 },
                 block_added: options && options.block_added
             });
@@ -206,32 +237,36 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
          * Given the latest information about the user's clipboard, hide or show the Paste button as appropriate.
          */
         refreshPasteButton(data) {
-            // 'data' is the same data returned by the "get clipboard status" API endpoint
-            // i.e. /api/content-staging/v1/clipboard/
-            if (this.options.canEdit && data.content) {
-                if (["vertical", "sequential", "chapter", "course"].includes(data.content.block_type)) {
-                    // This is not suitable for pasting into a unit.
-                    this.$(".paste-component").hide();
-                } else if (data.content.status === "expired") {
-                    // This has expired and can no longer be pasted.
-                    this.$(".paste-component").hide();
-                } else {
-                    // The thing in the clipboard can be pasted into this unit:
-                    const detailsPopupEl = this.$(".clipboard-details-popup")[0];
-                    detailsPopupEl.querySelector(".detail-block-name").innerText = data.content.display_name;
-                    detailsPopupEl.querySelector(".detail-block-type").innerText = data.content.block_type_display;
-                    detailsPopupEl.querySelector(".detail-course-name").innerText = data.source_context_title;
-                    if (data.source_edit_url) {
-                        detailsPopupEl.setAttribute("href", data.source_edit_url);
-                        detailsPopupEl.classList.remove("no-edit-link");
+            // Do not perform any changes on paste button since they are not
+            // rendered on Library or LibraryContent pages
+            if (!this.isLibraryPage && !this.isLibraryContentPage) {
+                // 'data' is the same data returned by the "get clipboard status" API endpoint
+                // i.e. /api/content-staging/v1/clipboard/
+                if (this.options.canEdit && data.content) {
+                    if (["vertical", "sequential", "chapter", "course"].includes(data.content.block_type)) {
+                        // This is not suitable for pasting into a unit.
+                        this.$(".paste-component").hide();
+                    } else if (data.content.status === "expired") {
+                        // This has expired and can no longer be pasted.
+                        this.$(".paste-component").hide();
                     } else {
-                        detailsPopupEl.setAttribute("href", "#");
-                        detailsPopupEl.classList.add("no-edit-link");
+                        // The thing in the clipboard can be pasted into this unit:
+                        const detailsPopupEl = this.$(".clipboard-details-popup")[0];
+                        detailsPopupEl.querySelector(".detail-block-name").innerText = data.content.display_name;
+                        detailsPopupEl.querySelector(".detail-block-type").innerText = data.content.block_type_display;
+                        detailsPopupEl.querySelector(".detail-course-name").innerText = data.source_context_title;
+                        if (data.source_edit_url) {
+                            detailsPopupEl.setAttribute("href", data.source_edit_url);
+                            detailsPopupEl.classList.remove("no-edit-link");
+                        } else {
+                            detailsPopupEl.setAttribute("href", "#");
+                            detailsPopupEl.classList.add("no-edit-link");
+                        }
+                        this.$(".paste-component").show();
                     }
-                    this.$(".paste-component").show();
+                } else {
+                    this.$(".paste-component").hide();
                 }
-            } else {
-                this.$(".paste-component").hide();
             }
         },
 
@@ -255,25 +290,91 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
                     staged_content: "clipboard",
                 }).then((data) => {
                     this.onNewXBlock(placeholderElement, scrollOffset, false, data);
+                    return data;
                 }).fail(() => {
                     // Remove the placeholder if the paste failed
                     placeholderElement.remove();
                 });
+            }).done((data) => {
+                const {
+                    conflicting_files: conflictingFiles,
+                    error_files: errorFiles,
+                    new_files: newFiles,
+                } = data.static_file_notices;
+
+                const notices = [];
+                if (errorFiles.length) {
+                    notices.push((next) => new PromptView.Error({
+                        title: gettext("Some errors occurred"),
+                        message: (
+                            gettext("The following required files could not be added to the course:") +
+                            " " + errorFiles.join(", ")
+                        ),
+                        actions: {primary: {text: gettext("OK"), click: (x) => { x.hide(); next(); }}},
+                    }));
+                }
+                if (conflictingFiles.length) {
+                    notices.push((next) => new PromptView.Warning({
+                        title: gettext("You may need to update a file(s) manually"),
+                        message: (
+                            gettext(
+                                "The following files already exist in this course but don't match the " +
+                                "version used by the component you pasted:"
+                            ) + " " + conflictingFiles.join(", ")
+                        ),
+                        actions: {primary: {text: gettext("OK"), click: (x) => { x.hide(); next(); }}},
+                    }));
+                }
+                if (newFiles.length) {
+                    notices.push(() => new NotificationView.Info({
+                        title: gettext("New file(s) added to Files & Uploads."),
+                        message: (
+                            gettext("The following required files were imported to this course:") +
+                            " "  + newFiles.join(", ")
+                        ),
+                        actions: {
+                            primary: {
+                                text: gettext('View files'),
+                                click: function(notification) {
+                                    const section = document.querySelector('[data-course-assets]');
+                                    const assetsUrl = $(section).attr('data-course-assets');
+                                    window.location.href = assetsUrl;
+                                    return;
+                                }
+                            },
+                            secondary: {
+                                text: gettext('Dismiss'),
+                                click: function(notification) {
+                                    return notification.hide();
+                                }
+                            }
+                        }
+                    }));
+                }
+                if (notices.length) {
+                    // Show the notices, one at a time:
+                    const showNext = () => {
+                        const view = notices.shift()(showNext);
+                        view.show();
+                    }
+                    // Delay to avoid conflict with the "Pasting..." notification.
+                    setTimeout(showNext, 1250);
+                }
             });
         },
 
         editXBlock: function(event, options) {
             event.preventDefault();
 
-            if(!options || options.view !== 'visibility_view' ){
-                const primaryHeader = $(event.target).closest('.xblock-header-primary')
+            if (!options || options.view !== 'visibility_view') {
+                const primaryHeader = $(event.target).closest('.xblock-header-primary, .nav-actions');
 
                 var useNewTextEditor = primaryHeader.attr('use-new-editor-text'),
                     useNewVideoEditor = primaryHeader.attr('use-new-editor-video'),
                     useNewProblemEditor = primaryHeader.attr('use-new-editor-problem'),
                     blockType = primaryHeader.attr('data-block-type');
 
-                if( (useNewTextEditor === 'True' && blockType === 'html')
+                if((useNewTextEditor === 'True' && blockType === 'html')
                         || (useNewVideoEditor === 'True' && blockType === 'video')
                         || (useNewProblemEditor === 'True' && blockType === 'problem')
                 ) {
@@ -304,6 +405,15 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
         showXBlockActionsMenu: function(event) {
             const showActionsButton = event.currentTarget;
             const subMenu = showActionsButton.parentElement.querySelector('.wrapper-nav-sub');
+
+            // Close all open dropdowns
+            const elements = document.querySelectorAll("li.action-item.action-actions-menu.nav-item");
+            elements.forEach(element => {
+                if (element !== showActionsButton.parentElement) {
+                    element.querySelector('.wrapper-nav-sub').classList.remove('is-shown');
+                }
+            });
+
             // Code in 'base.js' normally handles toggling these dropdowns but since this one is
             // not present yet during the domReady event, we have to handle displaying it ourselves.
             subMenu.classList.toggle('is-shown');
@@ -325,6 +435,13 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
         duplicateXBlock: function(event) {
             event.preventDefault();
             this.duplicateComponent(this.findXBlockElement(event.target));
+        },
+
+        openManageTags: function(event) {
+            const taxonomyTagsWidgetUrl = this.model.get('taxonomy_tags_widget_url');
+            const contentId = this.findXBlockElement(event.target).data('locator');
+
+            TaggingDrawerUtils.openDrawer(taxonomyTagsWidgetUrl, contentId);
         },
 
         showMoveXBlockModal: function(event) {
@@ -439,6 +556,78 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
                 });
         },
 
+        duplicateXBlock: function(event) {
+            event.preventDefault();
+            this.duplicateComponent(this.findXBlockElement(event.target));
+        },
+
+        showMoveXBlockModal: function(event) {
+            var xblockElement = this.findXBlockElement(event.target),
+                parentXBlockElement = xblockElement.parents('.studio-xblock-wrapper'),
+                modal = new MoveXBlockModal({
+                sourceXBlockInfo: XBlockUtils.findXBlockInfo(xblockElement, this.model),
+                sourceParentXBlockInfo: XBlockUtils.findXBlockInfo(parentXBlockElement, this.model),
+                XBlockURLRoot: this.getURLRoot(),
+                outlineURL: this.options.outlineURL
+            });
+
+            event.preventDefault();
+            modal.show();
+        },
+
+        deleteXBlock: function(event) {
+            event.preventDefault();
+            this.deleteComponent(this.findXBlockElement(event.target));
+        },
+
+        createPlaceholderElement: function() {
+            return $('<div/>', {class: 'studio-xblock-wrapper'});
+        },
+
+        createComponent: function(template, target) {
+            // A placeholder element is created in the correct location for the new xblock
+            // and then onNewXBlock will replace it with a rendering of the xblock. Note that
+            // for xblocks that can't be replaced inline, the entire parent will be refreshed.
+            var parentElement = this.findXBlockElement(target),
+                parentLocator = parentElement.data('locator'),
+                buttonPanel = target.closest('.add-xblock-component'),
+                listPanel = buttonPanel.prev(),
+                scrollOffset = ViewUtils.getScrollOffset(buttonPanel),
+                $placeholderEl = $(this.createPlaceholderElement()),
+                requestData = _.extend(template, {
+                    parent_locator: parentLocator
+                }),
+                placeholderElement;
+            placeholderElement = $placeholderEl.appendTo(listPanel);
+            return $.postJSON(this.getURLRoot() + '/', requestData,
+                _.bind(this.onNewXBlock, this, placeholderElement, scrollOffset, false))
+                .fail(function() {
+                    // Remove the placeholder if the update failed
+                    placeholderElement.remove();
+            });
+        },
+
+        duplicateComponent: function(xblockElement) {
+            // A placeholder element is created in the correct location for the duplicate xblock
+            // and then onNewXBlock will replace it with a rendering of the xblock. Note that
+            // for xblocks that can't be replaced inline, the entire parent will be refreshed.
+            var self = this,
+                parentElement = self.findXBlockElement(xblockElement.parent()),
+                scrollOffset = ViewUtils.getScrollOffset(xblockElement),
+                $placeholderEl = $(self.createPlaceholderElement()),
+                placeholderElement;
+
+            placeholderElement = $placeholderEl.insertAfter(xblockElement);
+            XBlockUtils.duplicateXBlock(xblockElement, parentElement)
+                .done(function(data) {
+                    self.onNewXBlock(placeholderElement, scrollOffset, true, data);
+                })
+                .fail(function() {
+                    // Remove the placeholder if the update failed
+                    placeholderElement.remove();
+                });
+        },
+
         deleteComponent: function(xblockElement) {
             var self = this,
                 xblockInfo = new XBlockInfo({
@@ -447,6 +636,61 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
             XBlockUtils.deleteXBlock(xblockInfo).done(function() {
                 self.onDelete(xblockElement);
             });
+        },
+
+        getSelectedLibraryComponents: function() {
+            var self = this;
+            var locator = this.$el.find('.studio-xblock-wrapper').data('locator');
+            console.log(ModuleUtils);
+            $.getJSON(
+                ModuleUtils.getUpdateUrl(locator) + '/handler/get_block_ids',
+                function(data) {
+                    self.selectedLibraryComponents = Array.from(data.source_block_ids);
+                    self.storedSelectedLibraryComponents = Array.from(data.source_block_ids);
+                }
+            );
+        },
+
+        saveSelectedLibraryComponents: function(e) {
+            var self = this;
+            var locator = this.$el.find('.studio-xblock-wrapper').data('locator');
+            e.preventDefault();
+            $.postJSON(
+                ModuleUtils.getUpdateUrl(locator) + '/handler/submit_studio_edits',
+                {values: {source_block_ids: self.storedSelectedLibraryComponents}},
+                function() {
+                    self.selectedLibraryComponents = Array.from(self.storedSelectedLibraryComponents);
+                    self.toggleSaveButton();
+                }
+            );
+        },
+
+        toggleLibraryComponent: function(event) {
+            var componentId = $(event.target).closest('.studio-xblock-wrapper').data('locator');
+            var storeIndex = this.storedSelectedLibraryComponents.indexOf(componentId);
+            if (storeIndex > -1) {
+                this.storedSelectedLibraryComponents.splice(storeIndex, 1);
+                this.toggleSaveButton();
+            } else {
+                this.storedSelectedLibraryComponents.push(componentId);
+                this.toggleSaveButton();
+            }
+        },
+
+        toggleSaveButton: function() {
+            var $saveButton = $('.nav-actions .save-button');
+            if (JSON.stringify(this.selectedLibraryComponents.sort()) === JSON.stringify(this.storedSelectedLibraryComponents.sort())) {
+                $saveButton.addClass('is-hidden');
+                window.removeEventListener('beforeunload', this.onBeforePageUnloadCallback);
+            } else {
+                $saveButton.removeClass('is-hidden');
+                window.addEventListener('beforeunload', this.onBeforePageUnloadCallback);
+            }
+        },
+
+        onBeforePageUnloadCallback: function (event) {
+            event.preventDefault();
+            event.returnValue = '';
         },
 
         onDelete: function(xblockElement) {
@@ -473,18 +717,25 @@ function($, _, Backbone, gettext, BasePage, ViewUtils, ContainerView, XBlockView
         onNewXBlock: function(xblockElement, scrollOffset, is_duplicate, data) {
             var useNewTextEditor = this.$('.xblock-header-primary').attr('use-new-editor-text'),
                 useNewVideoEditor = this.$('.xblock-header-primary').attr('use-new-editor-video'),
+                useVideoGalleryFlow = this.$('.xblock-header-primary').attr("use-video-gallery-flow"),
                 useNewProblemEditor = this.$('.xblock-header-primary').attr('use-new-editor-problem');
 
             // find the block type in the locator if availible
-            if(data.hasOwnProperty('locator')){
+            if(data.hasOwnProperty('locator')) {
                 var matchBlockTypeFromLocator = /\@(.*?)\+/;
                 var blockType = data.locator.match(matchBlockTypeFromLocator);
             }
             if((useNewTextEditor === 'True' && blockType.includes('html'))
                     || (useNewVideoEditor === 'True' && blockType.includes('video'))
-                    ||(useNewProblemEditor === 'True' && blockType.includes('problem'))
+                    || (useNewProblemEditor === 'True' && blockType.includes('problem'))
             ){
-                var destinationUrl = this.$('.xblock-header-primary').attr('authoring_MFE_base_url') + '/' + blockType[1] + '/' + encodeURI(data.locator);
+                var destinationUrl;
+                if (useVideoGalleryFlow === "True" && blockType.includes("video")) {
+                    destinationUrl = this.$('.xblock-header-primary').attr("authoring_MFE_base_url") + '/course-videos/' + encodeURI(data.locator);
+                }
+                else {
+                    destinationUrl = this.$('.xblock-header-primary').attr("authoring_MFE_base_url") + '/' + blockType[1] + '/' + encodeURI(data.locator);
+                }
                 window.location.href = destinationUrl;
                 return;
             }
